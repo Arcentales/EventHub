@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "258719034736",
+    "project_id": "eventhub-dacc7",
+    "storage_bucket": "eventhub-dacc7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258719034736:android:aa4c8fa5b95699f92533b5",
+        "android_client_info": {
+          "package_name": "com.Arcentales.eventhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6VTPlAo8r3c1dur-R-zyhtv3c6wrYEXM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
