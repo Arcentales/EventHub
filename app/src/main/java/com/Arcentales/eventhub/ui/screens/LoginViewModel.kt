@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.credentials.CustomCredential
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.Arcentales.eventhub.utils.FirestoreCollections
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
@@ -56,11 +57,11 @@ class LoginViewModel : ViewModel() {
     private fun fetchUserRoleAndNavigate(uid: String) {
         viewModelScope.launch {
             try {
-                val doc = db.collection("users").document(uid).get().await()
+                val doc = db.collection(FirestoreCollections.USERS).document(uid).get().await()
                 val role = doc.getString("role") ?: "user"
                 uiState = uiState.copy(userRole = role, isLoginSuccess = true)
             } catch (e: Exception) {
-                // Si falla Firestore, al menos permitimos entrar como user
+                // Si falla Firestore por permisos en el get, permitimos entrar como user
                 uiState = uiState.copy(userRole = "user", isLoginSuccess = true)
             }
         }
@@ -73,8 +74,6 @@ class LoginViewModel : ViewModel() {
     fun onPasswordChange(newPassword: String) {
         uiState = uiState.copy(password = newPassword, passwordError = null, errorMessage = null)
     }
-
-    // ── Validaciones ──────────────────────────────────────────────────────
 
     private fun validateFields(): Boolean {
         val email = uiState.email.trim()
@@ -100,8 +99,6 @@ class LoginViewModel : ViewModel() {
         return isValid
     }
 
-    // ── Acciones ──────────────────────────────────────────────────────────
-
     fun loginWithEmail() {
         if (!validateFields()) return
 
@@ -126,10 +123,16 @@ class LoginViewModel : ViewModel() {
             uiState = uiState.copy(isLoading = true, errorMessage = null)
             try {
                 val result = auth.createUserWithEmailAndPassword(uiState.email, uiState.password).await()
-                // Crear documento de usuario en Firestore con rol por defecto
                 result.user?.let { user ->
-                    val userData = hashMapOf("role" to "user", "email" to user.email)
-                    db.collection("users").document(user.uid).set(userData).await()
+                    try {
+                        // IMPORTANTE: Incluir 'uid' para cumplir con las reglas de Firestore
+                        val userData = hashMapOf(
+                            "uid" to user.uid, 
+                            "role" to "user", 
+                            "email" to user.email
+                        )
+                        db.collection(FirestoreCollections.USERS).document(user.uid).set(userData).await()
+                    } catch (ignore: Exception) {}
                     fetchUserRoleAndNavigate(user.uid)
                 }
             } catch (e: Exception) {
@@ -184,13 +187,21 @@ class LoginViewModel : ViewModel() {
                 val result = auth.signInWithCredential(firebaseCredential).await()
                 
                 result.user?.let { user ->
-                    // Verificar si ya existe en Firestore, si no, crear con rol user
-                    val doc = db.collection("users").document(user.uid).get().await()
-                    if (!doc.exists()) {
-                        val userData = hashMapOf("role" to "user", "email" to user.email)
-                        db.collection("users").document(user.uid).set(userData).await()
+                    try {
+                        val doc = db.collection(FirestoreCollections.USERS).document(user.uid).get().await()
+                        if (!doc.exists()) {
+                            // IMPORTANTE: Incluir 'uid' para cumplir con las reglas de Firestore
+                            val userData = hashMapOf(
+                                "uid" to user.uid, 
+                                "role" to "user", 
+                                "email" to user.email
+                            )
+                            db.collection(FirestoreCollections.USERS).document(user.uid).set(userData).await()
+                        }
+                        fetchUserRoleAndNavigate(user.uid)
+                    } catch (e: Exception) {
+                        uiState = uiState.copy(userRole = "user", isLoginSuccess = true)
                     }
-                    fetchUserRoleAndNavigate(user.uid)
                 }
             } catch (e: Exception) {
                 uiState = uiState.copy(
