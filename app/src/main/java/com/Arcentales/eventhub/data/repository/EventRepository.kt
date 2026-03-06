@@ -20,7 +20,8 @@ class EventRepository(
             .orderBy("startAt", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    // Manejo seguro: enviar lista vacía en lugar de cerrar con error
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val events = snapshot?.documents?.mapNotNull { doc ->

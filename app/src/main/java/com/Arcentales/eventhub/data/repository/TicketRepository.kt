@@ -23,10 +23,18 @@ class TicketRepository(
 
     // ── Obtener tickets del usuario actual en tiempo real ─────────────────
     fun getMyTickets(): Flow<List<Ticket>> = callbackFlow {
+        if (currentUserId.isBlank()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
         val listener = db.collection(FirestoreCollections.TICKETS)
             .whereEqualTo("userId", currentUserId)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) { close(error); return@addSnapshotListener }
+                if (error != null) {
+                    // Manejo seguro: enviar lista vacía en lugar de cerrar con error
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
                 val tickets = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Ticket::class.java)?.copy(id = doc.id)
                 } ?: emptyList()

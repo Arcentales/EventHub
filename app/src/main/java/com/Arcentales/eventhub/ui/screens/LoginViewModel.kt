@@ -1,5 +1,6 @@
 package com.Arcentales.eventhub.ui.screens.login
 
+import android.util.Patterns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,124 +11,159 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UI STATE — data class inmutable
-// Cada cambio crea una COPIA NUEVA del estado (.copy()).
-// Compose detecta el cambio y solo recompone lo necesario.
 // ─────────────────────────────────────────────────────────────────────────────
 
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
+    val emailError: String? = null,
+    val passwordError: String? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,    // null = sin error
-    val isLoginSuccess: Boolean = false  // true = disparar navegación al Home
+    val errorMessage: String? = null,
+    val infoMessage: String? = null,
+    val isLoginSuccess: Boolean = false,
+    val userRole: String? = null
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGIN VIEW MODEL
-//
-// Patrón MVVM + Unidirectional Data Flow:
-//   Estado (ViewModel) ──► UI ──► Evento ──► ViewModel ──► Nuevo Estado
-//
-// La UI solo LEE uiState y ENVÍA eventos (onEmailChange, loginWithEmail…).
-// El ViewModel procesa la lógica y actualiza el estado.
-// Sobrevive a rotaciones de pantalla.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class LoginViewModel : ViewModel() {
 
-    // mutableStateOf: Compose observa este valor y recompone cuando cambia.
-    // private set: la UI puede LEER pero NO puede modificar uiState directamente.
     var uiState by mutableStateOf(LoginUiState())
         private set
 
     private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
-    // Si ya hay sesión activa al abrir la app, ir directo al Home
     init {
-        if (auth.currentUser != null) {
-            uiState = uiState.copy(isLoginSuccess = true)
+        checkSession()
+    }
+
+    private fun checkSession() {
+        auth.currentUser?.let { user ->
+            fetchUserRoleAndNavigate(user.uid)
         }
     }
 
-    // ── Actualizar campos ─────────────────────────────────────────────────
-    // .copy() crea una nueva copia del estado cambiando solo los campos indicados.
-    // Limpia el error al escribir para no mostrar mensajes obsoletos.
+    private fun fetchUserRoleAndNavigate(uid: String) {
+        viewModelScope.launch {
+            try {
+                val doc = db.collection("users").document(uid).get().await()
+                val role = doc.getString("role") ?: "user"
+                uiState = uiState.copy(userRole = role, isLoginSuccess = true)
+            } catch (e: Exception) {
+                // Si falla Firestore, al menos permitimos entrar como user
+                uiState = uiState.copy(userRole = "user", isLoginSuccess = true)
+            }
+        }
+    }
 
     fun onEmailChange(newEmail: String) {
-        uiState = uiState.copy(email = newEmail, errorMessage = null)
+        uiState = uiState.copy(email = newEmail, emailError = null, errorMessage = null)
     }
 
     fun onPasswordChange(newPassword: String) {
-        uiState = uiState.copy(password = newPassword, errorMessage = null)
+        uiState = uiState.copy(password = newPassword, passwordError = null, errorMessage = null)
     }
 
-    // ── Login con Email / Password ────────────────────────────────────────
-    // viewModelScope.launch: coroutine que se cancela automáticamente si el
-    //   ViewModel se destruye → no hay memory leaks.
-    // .await(): convierte el Task de Firebase en suspend function.
-    //   Espera sin bloquear el hilo principal → la UI no se congela.
+    // ── Validaciones ──────────────────────────────────────────────────────
+
+    private fun validateFields(): Boolean {
+        val email = uiState.email.trim()
+        val password = uiState.password
+        var isValid = true
+
+        if (email.isBlank()) {
+            uiState = uiState.copy(emailError = "El correo es obligatorio")
+            isValid = false
+        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            uiState = uiState.copy(emailError = "Formato de correo no válido")
+            isValid = false
+        }
+
+        if (password.isBlank()) {
+            uiState = uiState.copy(passwordError = "La contraseña es obligatoria")
+            isValid = false
+        } else if (password.length < 6) {
+            uiState = uiState.copy(passwordError = "Mínimo 6 caracteres")
+            isValid = false
+        }
+
+        return isValid
+    }
+
+    // ── Acciones ──────────────────────────────────────────────────────────
 
     fun loginWithEmail() {
-        val email    = uiState.email.trim()
-        val password = uiState.password
-
-        if (email.isBlank() || password.isBlank()) {
-            uiState = uiState.copy(errorMessage = "Completa todos los campos")
-            return
-        }
+        if (!validateFields()) return
 
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true, errorMessage = null)
             try {
-                auth.signInWithEmailAndPassword(email, password).await()
-                uiState = uiState.copy(isLoading = false, isLoginSuccess = true)
+                val result = auth.signInWithEmailAndPassword(uiState.email, uiState.password).await()
+                result.user?.let { fetchUserRoleAndNavigate(it.uid) }
             } catch (e: Exception) {
                 uiState = uiState.copy(
-                    isLoading    = false,
+                    isLoading = false,
                     errorMessage = e.localizedMessage ?: "Error al iniciar sesión"
                 )
             }
         }
     }
 
-    // ── Registro con Email / Password ─────────────────────────────────────
-
     fun registerWithEmail() {
-        val email    = uiState.email.trim()
-        val password = uiState.password
-
-        if (email.isBlank() || password.isBlank()) {
-            uiState = uiState.copy(errorMessage = "Completa todos los campos")
-            return
-        }
-        if (password.length < 6) {
-            uiState = uiState.copy(errorMessage = "La contraseña debe tener al menos 6 caracteres")
-            return
-        }
+        if (!validateFields()) return
 
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true, errorMessage = null)
             try {
-                auth.createUserWithEmailAndPassword(email, password).await()
-                uiState = uiState.copy(isLoading = false, isLoginSuccess = true)
+                val result = auth.createUserWithEmailAndPassword(uiState.email, uiState.password).await()
+                // Crear documento de usuario en Firestore con rol por defecto
+                result.user?.let { user ->
+                    val userData = hashMapOf("role" to "user", "email" to user.email)
+                    db.collection("users").document(user.uid).set(userData).await()
+                    fetchUserRoleAndNavigate(user.uid)
+                }
             } catch (e: Exception) {
                 uiState = uiState.copy(
-                    isLoading    = false,
+                    isLoading = false,
                     errorMessage = e.localizedMessage ?: "Error al crear la cuenta"
                 )
             }
         }
     }
 
-    // ── Google Sign-In — Parte 1: recibir credencial desde la UI ─────────
-    // La UI usa Credential Manager (API moderna, reemplaza GoogleSignInClient)
-    // para mostrar el bottom sheet del sistema con las cuentas de Google.
-    // Entrega aquí la credencial obtenida.
+    fun sendPasswordReset() {
+        val email = uiState.email.trim()
+        if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            uiState = uiState.copy(emailError = "Ingresa un correo válido para recuperar")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = uiState.copy(isLoading = true, errorMessage = null, infoMessage = null)
+            try {
+                auth.sendPasswordResetEmail(email).await()
+                uiState = uiState.copy(
+                    isLoading = false,
+                    infoMessage = "Correo de recuperación enviado"
+                )
+            } catch (e: Exception) {
+                uiState = uiState.copy(
+                    isLoading = false,
+                    errorMessage = e.localizedMessage ?: "Error al enviar correo"
+                )
+            }
+        }
+    }
 
     fun handleGoogleSignInResult(credential: androidx.credentials.Credential) {
         if (credential is CustomCredential &&
@@ -140,33 +176,34 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    // ── Google Sign-In — Parte 2: autenticar en Firebase con el ID Token ──
-    // Flujo: Google ID Token → FirebaseCredential → Firebase Auth → isLoginSuccess
-
     private fun firebaseAuthWithGoogle(idToken: String) {
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true, errorMessage = null)
             try {
                 val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-                auth.signInWithCredential(firebaseCredential).await()
-                uiState = uiState.copy(isLoading = false, isLoginSuccess = true)
+                val result = auth.signInWithCredential(firebaseCredential).await()
+                
+                result.user?.let { user ->
+                    // Verificar si ya existe en Firestore, si no, crear con rol user
+                    val doc = db.collection("users").document(user.uid).get().await()
+                    if (!doc.exists()) {
+                        val userData = hashMapOf("role" to "user", "email" to user.email)
+                        db.collection("users").document(user.uid).set(userData).await()
+                    }
+                    fetchUserRoleAndNavigate(user.uid)
+                }
             } catch (e: Exception) {
                 uiState = uiState.copy(
-                    isLoading    = false,
+                    isLoading = false,
                     errorMessage = e.localizedMessage ?: "Error con Google Sign-In"
                 )
             }
         }
     }
 
-    // ── Error recibido desde la UI (ej: usuario canceló el selector) ──────
-
     fun onGoogleSignInError(message: String) {
         uiState = uiState.copy(errorMessage = message)
     }
-
-    // ── Reset después de navegar ──────────────────────────────────────────
-    // Evita que LaunchedEffect dispare la navegación más de una vez.
 
     fun onLoginHandled() {
         uiState = uiState.copy(isLoginSuccess = false)

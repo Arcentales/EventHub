@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">EventHub</string>
+    <!-- TODO: Reemplazar con el Web Client ID real de la consola de Firebase -->
+    <string name="default_web_client_id">258719034736-v5gqj5t67p8892s4o8v1g7v7n7v7v7v7.apps.googleusercontent.com</string>
 </resources>

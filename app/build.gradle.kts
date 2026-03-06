@@ -58,7 +58,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     // ── Google Fonts para Compose (tipografía Inter en runtime) ───────────
-    // Requerido por la guía de login para usar fuente Inter
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.8")
 
     // ── Navigation ────────────────────────────────────────────────────────
@@ -69,17 +68,16 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // ── Firebase BOM ──────────────────────────────────────────────────────
-    // El BOM controla las versiones compatibles de todos los módulos Firebase.
-    // No necesitas especificar versión en cada módulo individual.
-    implementation(platform("com.google.firebase:firebase-bom:34.9.0"))
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-functions")
+
+    // ── DataStore (Preferencias de Tema) ──────────────────────────────────
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // ── Credential Manager — Google Sign-In moderno ───────────────────────
-    // Reemplaza al viejo GoogleSignInClient (deprecated).
-    // Muestra un bottom sheet nativo del sistema para elegir cuenta de Google.
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
 
