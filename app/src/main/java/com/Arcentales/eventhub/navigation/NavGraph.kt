@@ -7,12 +7,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.Arcentales.eventhub.ui.screens.*
+import com.Arcentales.eventhub.ui.screens.login.LoginScreen  // ← paquete nuevo
 import com.Arcentales.eventhub.utils.Routes
 
 @Composable
 fun NavGraph(navController: NavHostController) {
     NavHost(
-        navController = navController,
+        navController    = navController,
         startDestination = Routes.LOGIN
     ) {
         // ── Login ─────────────────────────────────────────────────────────
@@ -22,6 +23,10 @@ fun NavGraph(navController: NavHostController) {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
+                },
+                onNavigateToRegister = {
+                    // TODO: navController.navigate(Routes.REGISTER)
+                    // Por ahora el toggle login/registro está dentro de LoginScreen
                 }
             )
         }
@@ -29,48 +34,40 @@ fun NavGraph(navController: NavHostController) {
         // ── Home ──────────────────────────────────────────────────────────
         composable(Routes.HOME) {
             HomeScreen(
-                onEventClick = { eventId ->
-                    navController.navigate(Routes.eventDetail(eventId))
-                },
-                onNavigateToTickets  = { navController.navigate(Routes.MY_TICKETS) },
-                onNavigateToScanner  = { navController.navigate(Routes.SCANNER) },
-                onNavigateToProfile  = { navController.navigate(Routes.PROFILE) }
+                onEventClick        = { eventId -> navController.navigate(Routes.eventDetail(eventId)) },
+                onNavigateToTickets = { navController.navigate(Routes.MY_TICKETS) },
+                onNavigateToScanner = { navController.navigate(Routes.SCANNER) },
+                onNavigateToProfile = { navController.navigate(Routes.PROFILE) }
             )
         }
 
         // ── Event Detail ──────────────────────────────────────────────────
         composable(
-            route = Routes.EVENT_DETAIL,
+            route     = Routes.EVENT_DETAIL,
             arguments = listOf(navArgument("eventId") { type = NavType.StringType })
         ) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
             EventDetailScreen(
-                eventId  = eventId,
-                onBack   = { navController.popBackStack() },
-                onTicketPurchased = {
-                    navController.navigate(Routes.MY_TICKETS)
-                }
+                eventId           = eventId,
+                onBack            = { navController.popBackStack() },
+                onTicketPurchased = { navController.navigate(Routes.MY_TICKETS) }
             )
         }
 
         // ── My Tickets ────────────────────────────────────────────────────
         composable(Routes.MY_TICKETS) {
-            MyTicketsScreen(
-                onBack = { navController.popBackStack() }
-            )
+            MyTicketsScreen(onBack = { navController.popBackStack() })
         }
 
         // ── Scanner ───────────────────────────────────────────────────────
         composable(Routes.SCANNER) {
-            ScannerScreen(
-                onClose = { navController.popBackStack() }
-            )
+            ScannerScreen(onClose = { navController.popBackStack() })
         }
 
         // ── Profile ───────────────────────────────────────────────────────
         composable(Routes.PROFILE) {
             ProfileScreen(
-                onBack = { navController.popBackStack() },
+                onBack   = { navController.popBackStack() },
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.HOME) { inclusive = true }
