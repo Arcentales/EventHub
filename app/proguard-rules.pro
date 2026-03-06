@@ -1,21 +1,37 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ── ProGuard rules para EventHub ─────────────────────────────────────────────
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Conservar números de línea en stack traces para debugging
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ── Firebase ──────────────────────────────────────────────────────────────────
+# Firestore — conservar los modelos de datos para serialización automática
+-keep class com.Arcentales.eventhub.data.models.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Firebase Auth
+-keep class com.google.firebase.auth.** { *; }
+
+# Firebase Firestore
+-keep class com.google.firebase.firestore.** { *; }
+-keep class com.google.firebase.functions.** { *; }
+
+# ── Google Wallet / Play Services ─────────────────────────────────────────────
+-keep class com.google.android.gms.** { *; }
+
+# ── ML Kit Barcode ────────────────────────────────────────────────────────────
+-keep class com.google.mlkit.** { *; }
+
+# ── CameraX ───────────────────────────────────────────────────────────────────
+-keep class androidx.camera.** { *; }
+
+# ── Kotlin serialization ──────────────────────────────────────────────────────
+-keepattributes *Annotation*
+-keepattributes Signature
+
+# ── Reglas generales de Jetpack Compose ───────────────────────────────────────
+-keep class androidx.compose.** { *; }
+
+# Si usas WebView con JS (no aplica aquí, pero por las dudas):
+# -keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#    public *;
+# }

@@ -27,5 +27,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        // ⚠️ ERROR CORREGIDO: se eliminó la 's' suelta que había aquí
     }
 }
