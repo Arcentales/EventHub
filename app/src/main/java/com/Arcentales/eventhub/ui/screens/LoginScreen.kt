@@ -246,14 +246,14 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = Navy700)
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = Navy800)
                             Text(
                                 text = "o continua con",
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = Navy700)
+                            HorizontalDivider(modifier = Modifier.weight(1f), color = Navy800)
                         }
 
                         // Google Sign-In
@@ -290,7 +290,7 @@ fun LoginScreen(
                                 .height(50.dp),
                             enabled = !state.isLoading,
                             shape = RoundedCornerShape(14.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Navy700)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Navy800)
                         ) {
                             Text(
                                 text = "G",
@@ -337,7 +337,7 @@ fun LoginScreen(
 @Composable
 private fun loginTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Blue500,
-    unfocusedBorderColor = Navy700,
+    unfocusedBorderColor = Navy800,
     focusedLabelColor = Blue500,
     unfocusedLabelColor = Slate400,
     focusedTextColor = Color.White,
