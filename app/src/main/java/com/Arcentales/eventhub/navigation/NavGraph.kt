@@ -19,15 +19,20 @@ fun NavGraph(navController: NavHostController) {
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = { role ->
-                    // Aquí podrías decidir a qué pantalla ir según el rol
-                    // if (role == "admin") navController.navigate(Routes.ADMIN_HOME)
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    if (role == "admin") {
+                        navController.navigate(Routes.ADMIN_HOME) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
                     }
                 }
             )
         }
 
+        // --- Vista de Cliente ---
         composable(Routes.HOME) {
             HomeScreen(
                 onEventClick = { eventId -> navController.navigate(Routes.eventDetail(eventId)) },
@@ -49,6 +54,31 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
+        // --- Vista de Administrador ---
+        composable(Routes.ADMIN_HOME) {
+            AdminHomeScreen(
+                onEditEvent = { eventId -> navController.navigate(Routes.adminEventEdit(eventId)) },
+                onCreateEvent = { navController.navigate(Routes.adminEventEdit("new")) },
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.ADMIN_HOME) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.ADMIN_EVENT_EDIT,
+            arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: "new"
+            AdminEventEditScreen(
+                eventId = eventId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // --- Comunes ---
         composable(Routes.MY_TICKETS) {
             MyTicketsScreen(onBack = { navController.popBackStack() })
         }
@@ -62,7 +92,7 @@ fun NavGraph(navController: NavHostController) {
                 onBack = { navController.popBackStack() },
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.HOME) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

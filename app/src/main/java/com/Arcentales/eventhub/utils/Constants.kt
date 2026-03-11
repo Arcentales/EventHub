@@ -7,8 +7,13 @@ object Routes {
     const val MY_TICKETS   = "tickets"
     const val SCANNER      = "scanner"
     const val PROFILE      = "profile"
+    
+    // Admin Routes
+    const val ADMIN_HOME   = "admin_home"
+    const val ADMIN_EVENT_EDIT = "admin_event_edit/{eventId}" // eventId "new" for creation
 
     fun eventDetail(eventId: String) = "event/$eventId"
+    fun adminEventEdit(eventId: String) = "admin_event_edit/$eventId"
 }
 
 object FirestoreCollections {
