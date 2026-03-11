@@ -58,12 +58,36 @@ class EventRepository(
         }
     }
 
+    // Ticket Types Management for Organizers
+    suspend fun saveTicketType(eventId: String, ticketType: TicketType) {
+        val docRef = if (ticketType.id.isEmpty()) {
+            db.collection(FirestoreCollections.EVENTS)
+                .document(eventId)
+                .collection(FirestoreCollections.TICKET_TYPES)
+                .document()
+        } else {
+            db.collection(FirestoreCollections.EVENTS)
+                .document(eventId)
+                .collection(FirestoreCollections.TICKET_TYPES)
+                .document(ticketType.id)
+        }
+        
+        val finalTicketType = if (ticketType.id.isEmpty()) ticketType.copy(id = docRef.id, eventId = eventId) else ticketType
+        docRef.set(finalTicketType).await()
+    }
+
+    suspend fun deleteTicketType(eventId: String, ticketTypeId: String) {
+        db.collection(FirestoreCollections.EVENTS)
+            .document(eventId)
+            .collection(FirestoreCollections.TICKET_TYPES)
+            .document(ticketTypeId)
+            .delete()
+            .await()
+    }
+
     // ── Buscar eventos por título ─────────────────────────────────────────
     suspend fun searchEvents(query: String): List<Event> {
         return try {
-            // Firestore no soporta full-text search nativo.
-            // Solución simple: traer todos y filtrar en cliente.
-            // Para producción usar Algolia o Typesense.
             val snapshot = db.collection(FirestoreCollections.EVENTS).get().await()
             snapshot.documents.mapNotNull { doc ->
                 doc.toObject(Event::class.java)?.copy(id = doc.id)

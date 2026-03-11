@@ -5,5 +5,7 @@ data class User(
     val email: String = "",
     val displayName: String? = null,
     val photoUrl: String? = null,
-    val role: String = "user" // "user", "admin", "scanner"
+    val role: String = "user", // "user", "organizer", "admin"
+    val isOrganizerRequested: Boolean = false,
+    val organizerStatus: String = "none" // "none", "pending", "approved", "rejected"
 )
