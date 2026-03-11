@@ -1,46 +1,45 @@
 package com.Arcentales.eventhub.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary          = Blue500,
-    onPrimary        = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = Blue500.copy(alpha = 0.1f),
-    secondary        = Cyan500,
-    background       = androidx.compose.ui.graphics.Color(0xFFF8FAFC),
-    surface          = androidx.compose.ui.graphics.Color.White,
-    onBackground     = Slate900,
-    onSurface        = Slate900,
-    error            = Red500,
-    outline          = Slate200
+    primary            = md_theme_light_primary,
+    onPrimary          = md_theme_light_onPrimary,
+    primaryContainer   = md_theme_light_primaryContainer,
+    onPrimaryContainer = md_theme_light_onPrimaryContainer,
+    background         = md_theme_light_background,
+    onBackground       = md_theme_light_onBackground,
+    surface            = md_theme_light_surface,
+    onSurface          = md_theme_light_onSurface,
+    surfaceVariant     = md_theme_light_surfaceVariant,
+    outline            = md_theme_light_outline,
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary          = Blue500,
-    onPrimary        = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = Blue500.copy(alpha = 0.15f),
-    secondary        = Cyan500,
-    background       = DarkBg,
-    surface          = DarkSurf,
-    onBackground     = androidx.compose.ui.graphics.Color.White,
-    onSurface        = androidx.compose.ui.graphics.Color.White,
-    error            = Red500,
-    outline          = Navy700
+    primary            = md_theme_dark_primary,
+    onPrimary          = md_theme_dark_onPrimary,
+    primaryContainer   = md_theme_dark_primaryContainer,
+    onPrimaryContainer = md_theme_dark_onPrimaryContainer,
+    background         = md_theme_dark_background,
+    onBackground       = md_theme_dark_onBackground,
+    surface            = md_theme_dark_surface,
+    onSurface          = md_theme_dark_onSurface,
+    surfaceVariant     = md_theme_dark_surfaceVariant,
+    outline            = md_theme_dark_outline,
 )
 
 @Composable
 fun EventHubTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,   // desactivado para usar colores propios
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -52,18 +51,9 @@ fun EventHubTheme(
         else      -> LightColorScheme
     }
 
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
-    }
-
     MaterialTheme(
         colorScheme = colorScheme,
-        typography  = Typography,
+        typography  = EventHubTypography,
         content     = content
     )
 }

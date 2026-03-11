@@ -2,6 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+    ══════════════════════════════════════════════════════════════════
+    PERMISOS
+    ══════════════════════════════════════════════════════════════════
+    -->
+
+    <!-- Ubicación (FusedLocationProviderClient en ProfileScreen) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Cámara (CameraX en ScannerScreen) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Internet (Firebase, Google Wallet, Coil) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Requerido por Credential Manager (Google Sign-In) -->
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -10,18 +29,21 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EventHub">
+        android:theme="@style/Theme.EventHub"
+        tools:targetApi="31">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.EventHub">
+            android:theme="@style/Theme.EventHub"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
     </application>
 
 </manifest>
