@@ -4,12 +4,14 @@ package com.Arcentales.eventhub.utils
 // Rutas de navegación
 // ─────────────────────────────────────────────────────────────────────────────
 object Routes {
-    const val LOGIN        = "login"
-    const val HOME         = "home"
-    const val EVENT_DETAIL = "event/{eventId}"
-    const val MY_TICKETS   = "tickets"
-    const val SCANNER      = "scanner"
-    const val PROFILE      = "profile"
+    const val LOGIN             = "login"
+    const val HOME              = "home"               // ← clientes
+    const val ADMIN_HOME        = "admin_home"         // ← organizador (evento@gmail.com)
+    const val STAFF_MANAGEMENT  = "staff_management"   // ← gestión de roles (admin)
+    const val EVENT_DETAIL      = "event/{eventId}"
+    const val MY_TICKETS        = "tickets"
+    const val SCANNER           = "scanner"            // ← escaner@gmail.com entra aquí directo
+    const val PROFILE           = "profile"
 
     fun eventDetail(eventId: String) = "event/$eventId"
     fun adminEventEdit(eventId: String) = "admin_event_edit/$eventId"
