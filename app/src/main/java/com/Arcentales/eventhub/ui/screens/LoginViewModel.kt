@@ -58,7 +58,18 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val doc = db.collection(FirestoreCollections.USERS).document(uid).get().await()
-                val role = doc.getString("role") ?: "user"
+                val rawRole = doc.getString("role") ?: "user"
+                // Normaliza cualquier variante del rol a los valores estándar
+                val role = when {
+                    rawRole.lowercase() == "administrador" ||
+                            rawRole.lowercase().contains("administr") -> "administrador"
+                    rawRole.lowercase() == "admin" ||
+                            rawRole.lowercase().contains("organiz")   -> "admin"
+                    rawRole.lowercase() == "scanner" ||
+                            rawRole.lowercase().contains("scan") ||
+                            rawRole.lowercase().contains("esc")       -> "scanner"
+                    else                                       -> "user"
+                }
                 uiState = uiState.copy(userRole = role, isLoginSuccess = true)
             } catch (e: Exception) {
                 // Si falla Firestore por permisos en el get, permitimos entrar como user
@@ -127,8 +138,8 @@ class LoginViewModel : ViewModel() {
                     try {
                         // IMPORTANTE: Incluir 'uid' para cumplir con las reglas de Firestore
                         val userData = hashMapOf(
-                            "uid" to user.uid, 
-                            "role" to "user", 
+                            "uid" to user.uid,
+                            "role" to "user",
                             "email" to user.email
                         )
                         db.collection(FirestoreCollections.USERS).document(user.uid).set(userData).await()
@@ -185,15 +196,15 @@ class LoginViewModel : ViewModel() {
             try {
                 val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
                 val result = auth.signInWithCredential(firebaseCredential).await()
-                
+
                 result.user?.let { user ->
                     try {
                         val doc = db.collection(FirestoreCollections.USERS).document(user.uid).get().await()
                         if (!doc.exists()) {
                             // IMPORTANTE: Incluir 'uid' para cumplir con las reglas de Firestore
                             val userData = hashMapOf(
-                                "uid" to user.uid, 
-                                "role" to "user", 
+                                "uid" to user.uid,
+                                "role" to "user",
                                 "email" to user.email
                             )
                             db.collection(FirestoreCollections.USERS).document(user.uid).set(userData).await()

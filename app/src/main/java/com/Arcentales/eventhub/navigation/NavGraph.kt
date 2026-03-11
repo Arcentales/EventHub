@@ -5,9 +5,11 @@ package com.Arcentales.eventhub.navigation
 //
 // Flujo de navegación por rol al hacer login:
 //
-//   role == "scanner"  →  SCANNER      (escaner@gmail.com)
-//   role == "admin"    →  ADMIN_HOME   (evento@gmail.com)
-//   cualquier otro     →  HOME         (clientes registrados)
+//   role == "scanner"  →  SCANNER          (escaner@gmail.com)
+//   role == "admin"    →  ADMIN_HOME        (evento@gmail.com / kpojuanluis2025)
+//   cualquier otro     →  HOME              (clientes registrados)
+//
+// Desde ADMIN_HOME hay un botón que navega a STAFF_MANAGEMENT.
 //
 // Todas las rutas hacen popUpTo(LOGIN) { inclusive = true } para que
 // el botón atrás no regrese a la pantalla de login.
@@ -21,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.Arcentales.eventhub.ui.screens.*
 import com.Arcentales.eventhub.ui.screens.admin.CreateEventScreen
+import com.Arcentales.eventhub.ui.screens.admin.StaffManagementScreen
 import com.Arcentales.eventhub.ui.screens.login.LoginScreen
 import com.Arcentales.eventhub.utils.Routes
 import com.Arcentales.eventhub.utils.UserRoles
@@ -37,9 +40,10 @@ fun NavGraph(navController: NavHostController) {
             LoginScreen(
                 onLoginSuccess = { role ->
                     val destination = when (role) {
-                        UserRoles.SCANNER -> Routes.SCANNER    // escaner@gmail.com
-                        UserRoles.ADMIN   -> Routes.ADMIN_HOME // evento@gmail.com
-                        else              -> Routes.HOME       // clientes normales
+                        UserRoles.SCANNER       -> Routes.SCANNER          // escaner
+                        UserRoles.ADMIN         -> Routes.ADMIN_HOME       // organizador
+                        UserRoles.ADMINISTRADOR -> Routes.STAFF_MANAGEMENT // administrador
+                        else                    -> Routes.HOME             // cliente / null
                     }
                     navController.navigate(destination) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
@@ -48,7 +52,7 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // ── HOME — Vista de Cliente ────────────────────────────────────────
+        // ── HOME — Cliente ────────────────────────────────────────────────
         composable(Routes.HOME) {
             HomeScreen(
                 onEventClick        = { eventId -> navController.navigate(Routes.eventDetail(eventId)) },
@@ -58,13 +62,26 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // ── ADMIN_HOME — Vista del Organizador ────────────────────────────
+        // ── ADMIN_HOME — Organizador ──────────────────────────────────────
         composable(Routes.ADMIN_HOME) {
             CreateEventScreen(
-                onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
+                onNavigateToProfile      = { navController.navigate(Routes.PROFILE) },
+                onNavigateToStaffManager = { navController.navigate(Routes.STAFF_MANAGEMENT) },
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.ADMIN_HOME) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ── STAFF_MANAGEMENT — Gestión de trabajadores ────────────────────
+        composable(Routes.STAFF_MANAGEMENT) {
+            StaffManagementScreen(
+                onBack   = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
@@ -77,8 +94,8 @@ fun NavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
             EventDetailScreen(
-                eventId          = eventId,
-                onBack           = { navController.popBackStack() },
+                eventId           = eventId,
+                onBack            = { navController.popBackStack() },
                 onTicketPurchased = { navController.navigate(Routes.MY_TICKETS) }
             )
         }
@@ -88,13 +105,10 @@ fun NavGraph(navController: NavHostController) {
             MyTicketsScreen(onBack = { navController.popBackStack() })
         }
 
-        // ── Scanner — Vista del Trabajador Escáner ────────────────────────
-        // También accesible desde HomeScreen para admins/clientes si es necesario
+        // ── Scanner — Trabajador escáner QR ──────────────────────────────
         composable(Routes.SCANNER) {
             ScannerScreen(
                 onClose = {
-                    // Si el scanner intenta "volver", lo mandamos al login
-                    // porque no tiene otra pantalla asignada
                     if (navController.previousBackStackEntry == null) {
                         navController.navigate(Routes.LOGIN) {
                             popUpTo(Routes.SCANNER) { inclusive = true }
@@ -106,13 +120,12 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // ── Perfil — Compartido por todos los roles ───────────────────────
+        // ── Perfil — todos los roles ──────────────────────────────────────
         composable(Routes.PROFILE) {
             ProfileScreen(
                 onBack   = { navController.popBackStack() },
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
-                        // Limpia toda la pila sin importar desde qué vista viene
                         popUpTo(0) { inclusive = true }
                     }
                 }
