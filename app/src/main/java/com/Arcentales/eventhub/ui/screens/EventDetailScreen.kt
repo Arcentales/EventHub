@@ -15,11 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.Arcentales.eventhub.data.models.TicketType
 import com.Arcentales.eventhub.ui.theme.*
 import com.Arcentales.eventhub.viewmodel.EventsViewModel
@@ -34,10 +36,19 @@ fun EventDetailScreen(
     eventsViewModel: EventsViewModel = viewModel(),
     ticketsViewModel: TicketsViewModel = viewModel()
 ) {
-    val eventsState  by eventsViewModel.uiState.collectAsStateWithLifecycle()
+    val eventsState by eventsViewModel.uiState.collectAsStateWithLifecycle()
     val ticketsState by ticketsViewModel.uiState.collectAsStateWithLifecycle()
 
     val event = eventsState.selectedEvent
+
+    // Simulador de pago (Dialog)
+    var showPaymentDialog by remember { mutableStateOf(false) }
+    var selectedTicketType by remember { mutableStateOf<TicketType?>(null) }
+
+    // Cargar datos al entrar
+    LaunchedEffect(eventId) {
+        eventsViewModel.getEventById(eventId)
+    }
 
     // Navegar cuando la compra sea exitosa
     LaunchedEffect(ticketsState.purchaseSuccess) {
@@ -47,14 +58,10 @@ fun EventDetailScreen(
         }
     }
 
-    LaunchedEffect(eventId) {
-        // Seleccionar el evento al entrar
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Event Details", fontWeight = FontWeight.Bold) },
+                title = { Text("Detalles del Evento", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -64,14 +71,11 @@ fun EventDetailScreen(
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.Share, contentDescription = "Compartir")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { padding ->
-        if (event == null) {
+        if (eventsState.isLoading || event == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Blue500)
             }
@@ -84,199 +88,189 @@ fun EventDetailScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
-            // ── Hero banner ───────────────────────────────────────────────
+            // ── Imagen del evento ─────────────────────────────────────────
             item {
-                Box(
+                AsyncImage(
+                    model = event.imageUrl,
+                    contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .background(Brush.linearGradient(listOf(Navy900, Navy800)))
-                ) {
-                    if (event.status.name == "ACTIVE") {
-                        Surface(
-                            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            color = Blue500
-                        ) {
-                            Text(
-                                "Live",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
+                        .height(240.dp)
+                        .background(Slate200),
+                    contentScale = ContentScale.Crop
+                )
             }
 
-            // ── Info card ─────────────────────────────────────────────────
+            // ── Info card principal ───────────────────────────────────────
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(Modifier.padding(20.dp)) {
-                        Text(event.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(16.dp))
-
-                        // Fecha
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Blue500, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text("DATE & TIME", style = MaterialTheme.typography.labelSmall, color = Slate400)
-                                Text(event.startAt?.toDate()?.toString() ?: "Por confirmar", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                        Spacer(Modifier.height(12.dp))
-
-                        // Venue
-                        Row(verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Blue500, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text("VENUE", style = MaterialTheme.typography.labelSmall, color = Slate400)
-                                Text(event.venueName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                Text(event.venueAddress, style = MaterialTheme.typography.bodySmall, color = Slate400)
-                            }
-                        }
-
-                        // Google Wallet banner
-                        if (event.walletClassId.isNotBlank()) {
-                            Spacer(Modifier.height(16.dp))
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = Navy900
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("Fast & Secure Entry", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-                                        Text("Save your tickets to Google Wallet", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                                    }
-                                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-                                }
-                            }
-                        }
+                Column(Modifier.padding(20.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Blue500.copy(alpha = 0.1f)
+                    ) {
+                        Text(
+                            event.category.uppercase(),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            color = Blue500,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
                     }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        event.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black
+                    )
+                    Spacer(Modifier.height(20.dp))
+
+                    // Fecha y Lugar
+                    InfoRow(Icons.Default.CalendarToday, "FECHA Y HORA", event.startAt?.toDate()?.toString() ?: "TBD")
+                    Spacer(Modifier.height(16.dp))
+                    InfoRow(Icons.Default.LocationOn, "LUGAR", "${event.venueName}\n${event.venueAddress}")
                 }
             }
 
             // ── Descripción ───────────────────────────────────────────────
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(Modifier.padding(20.dp)) {
-                        Text("About Event", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text(event.description, style = MaterialTheme.typography.bodyMedium, color = Slate600, lineHeight = 22.sp)
-                    }
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Text("Acerca de este evento", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        event.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Slate600,
+                        lineHeight = 22.sp
+                    )
                 }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Slate200)
             }
 
             // ── Tipos de tickets ──────────────────────────────────────────
             item {
                 Text(
-                    "Ticket Types",
+                    "Selecciona tu entrada",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 12.dp)
                 )
             }
 
             items(eventsState.ticketTypes) { ticketType ->
-                TicketTypeCard(
-                    ticketType   = ticketType,
-                    isPurchasing = ticketsState.isPurchasing,
-                    onBuyClick   = {
-                        ticketsViewModel.purchaseTicket(event.id, ticketType.id)
-                    },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                TicketTypeItem(
+                    ticketType = ticketType,
+                    onBuyClick = {
+                        selectedTicketType = ticketType
+                        showPaymentDialog = true
+                    }
                 )
             }
 
-            item { Spacer(Modifier.height(24.dp)) }
+            item { Spacer(Modifier.height(40.dp)) }
         }
 
-        // Error snackbar
-        if (ticketsState.errorMessage != null) {
-            LaunchedEffect(ticketsState.errorMessage) {
-                ticketsViewModel.clearError()
+        // Diálogo de Pago Simulado
+        if (showPaymentDialog && selectedTicketType != null) {
+            PaymentSimulationDialog(
+                ticketType = selectedTicketType!!,
+                isPurchasing = ticketsState.isPurchasing,
+                onConfirm = {
+                    ticketsViewModel.purchaseTicket(event.id, selectedTicketType!!.id)
+                },
+                onDismiss = { showPaymentDialog = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(
+            modifier = Modifier.size(36.dp).background(Slate100, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = Blue500, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = Slate400, fontWeight = FontWeight.Bold)
+            Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun TicketTypeItem(ticketType: TicketType, onBuyClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(ticketType.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    if (ticketType.isSoldOut) "Agotado" else "${ticketType.available} disponibles",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (ticketType.isSoldOut) Red500 else Green500
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "$${ticketType.price} ${ticketType.currency}",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    color = Blue500
+                )
+            }
+            Button(
+                onClick = onBuyClick,
+                enabled = !ticketType.isSoldOut,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Blue500)
+            ) {
+                Text("Comprar", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
 @Composable
-private fun TicketTypeCard(
+private fun PaymentSimulationDialog(
     ticketType: TicketType,
     isPurchasing: Boolean,
-    onBuyClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    val statusColor = when {
-        ticketType.isSoldOut -> Red500
-        ticketType.isLimited -> Amber500
-        else                 -> Green500
-    }
-    val statusLabel = when {
-        ticketType.isSoldOut -> "SOLD OUT"
-        ticketType.isLimited -> "LIMITED"
-        else                 -> "AVAILABLE"
-    }
-
-    Card(
-        modifier  = modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(ticketType.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(ticketType.description, style = MaterialTheme.typography.bodySmall, color = Slate400)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirmar Compra") },
+        text = {
+            Column {
+                Text("Estás por comprar:")
+                Text(ticketType.name, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    if (ticketType.price == 0.0) "Gratis" else "$${ticketType.price}",
-                    fontWeight = FontWeight.Black,
-                    fontSize   = 22.sp,
-                    color      = if (ticketType.isSoldOut) Slate400 else MaterialTheme.colorScheme.onSurface
-                )
-                Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor)
+                Text("Total a pagar:", fontSize = 12.sp, color = Slate400)
+                Text("$${ticketType.price} ${ticketType.currency}", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Blue500)
+                Spacer(Modifier.height(16.dp))
+                Text("Este es un pago simulado. Al confirmar, se generará tu ticket automáticamente.", style = MaterialTheme.typography.labelSmall, color = Slate400)
             }
-            Spacer(Modifier.width(12.dp))
-            Button(
-                onClick  = onBuyClick,
-                enabled  = !ticketType.isSoldOut && !isPurchasing,
-                shape    = RoundedCornerShape(20.dp),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = if (ticketType.isSoldOut) Slate200 else Blue500,
-                    contentColor   = if (ticketType.isSoldOut) Slate400 else Color.White
-                ),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
-            ) {
-                if (isPurchasing) {
-                    CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                } else {
-                    Text(if (ticketType.isSoldOut) "Sold Out" else "Buy Now", fontWeight = FontWeight.Bold)
-                }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm, enabled = !isPurchasing) {
+                if (isPurchasing) CircularProgressIndicator(Modifier.size(20.dp), Color.White)
+                else Text("Confirmar Pago")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isPurchasing) {
+                Text("Cancelar")
             }
         }
-    }
+    )
 }

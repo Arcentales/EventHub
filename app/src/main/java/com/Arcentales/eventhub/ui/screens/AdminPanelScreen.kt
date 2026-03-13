@@ -7,13 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,10 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.Arcentales.eventhub.data.models.User
-import com.Arcentales.eventhub.ui.theme.Blue500
-import com.Arcentales.eventhub.ui.theme.Green500
-import com.Arcentales.eventhub.ui.theme.Red500
-import com.Arcentales.eventhub.ui.theme.Slate400
+import com.Arcentales.eventhub.data.models.Event
+import com.Arcentales.eventhub.ui.theme.*
 import com.Arcentales.eventhub.viewmodel.AdminViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +29,7 @@ fun AdminPanelScreen(
     viewModel: AdminViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -53,43 +48,71 @@ fun AdminPanelScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Stats summary
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                StatCard("Usuarios", uiState.allUsers.size.toString(), Icons.Default.People, Modifier.weight(1f))
-                StatCard("Pendientes", uiState.pendingRequests.size.toString(), Icons.Default.Check, Modifier.weight(1f))
+            TabRow(selectedTabIndex = selectedTab, containerColor = Color.White, contentColor = Blue500) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                    Text("Solicitudes", modifier = Modifier.padding(16.dp))
+                }
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                    Text("Moderar Eventos", modifier = Modifier.padding(16.dp))
+                }
             }
 
-            Text(
-                "Solicitudes de Organizador",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-
-            if (uiState.isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Blue500)
-                }
-            } else if (uiState.pendingRequests.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay solicitudes pendientes", color = Slate400)
-                }
+            if (selectedTab == 0) {
+                // --- Pestaña: Solicitudes de Organizador ---
+                RequestsTab(uiState, viewModel)
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(uiState.pendingRequests) { request ->
-                        OrganizerRequestItem(
-                            user = request,
-                            onApprove = { viewModel.approveOrganizer(request.uid) },
-                            onReject = { viewModel.rejectOrganizer(request.uid) }
-                        )
-                    }
+                // --- Pestaña: Moderación de Eventos ---
+                EventsModerationTab(uiState, viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+fun RequestsTab(uiState: com.Arcentales.eventhub.viewmodel.AdminUiState, viewModel: AdminViewModel) {
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StatCard("Usuarios", uiState.allUsers.size.toString(), Icons.Default.People, Modifier.weight(1f))
+            StatCard("Pendientes", uiState.pendingRequests.size.toString(), Icons.Default.Check, Modifier.weight(1f))
+        }
+
+        if (uiState.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Blue500)
+            }
+        } else if (uiState.pendingRequests.isEmpty()) {
+            EmptyState("No hay solicitudes pendientes", "👥")
+        } else {
+            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(uiState.pendingRequests) { request ->
+                    OrganizerRequestItem(request, { viewModel.approveOrganizer(request.uid) }, { viewModel.rejectOrganizer(request.uid) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EventsModerationTab(uiState: com.Arcentales.eventhub.viewmodel.AdminUiState, viewModel: AdminViewModel) {
+    Column(Modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = uiState.searchQuery,
+            onValueChange = { viewModel.onSearchQueryChange(it) },
+            placeholder = { Text("Buscar eventos...") },
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = { Icon(Icons.Default.Search, null) }
+        )
+
+        if (uiState.filteredEvents.isEmpty()) {
+            EmptyState("No se encontraron eventos", "🎭")
+        } else {
+            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(uiState.filteredEvents) { event ->
+                    EventModerationItem(event, onDelete = { viewModel.deleteEvent(event.id) })
                 }
             }
         }
@@ -136,6 +159,42 @@ fun OrganizerRequestItem(user: User, onApprove: () -> Unit, onReject: () -> Unit
                     Icon(Icons.Default.Check, contentDescription = "Aprobar", tint = Green500)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun EventModerationItem(event: Event, onDelete: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(event.title, fontWeight = FontWeight.Bold)
+                Text(event.venueName, fontSize = 12.sp, color = Slate400)
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Green500.copy(alpha = 0.1f),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(event.category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = Green500, fontWeight = FontWeight.Bold)
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Red500)
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyState(text: String, emoji: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(emoji, fontSize = 48.sp)
+            Text(text, color = Slate400, fontWeight = FontWeight.Medium)
         }
     }
 }

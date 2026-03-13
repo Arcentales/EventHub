@@ -1,7 +1,9 @@
 package com.Arcentales.eventhub.ui.screens
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.Arcentales.eventhub.data.models.Ticket
 import com.Arcentales.eventhub.data.models.TicketStatus
 import com.Arcentales.eventhub.ui.theme.*
+import com.Arcentales.eventhub.utils.QRGenerator
 import com.Arcentales.eventhub.viewmodel.TicketsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +41,7 @@ fun MyTicketsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Purchased Tickets", fontWeight = FontWeight.Bold) },
+                title = { Text("Mis Entradas", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -102,17 +106,22 @@ private fun TicketCard(
     ticket: Ticket,
     onAddToWallet: () -> Unit
 ) {
-    val isUsed     = ticket.status == TicketStatus.USED
+    val isUsed = ticket.status == TicketStatus.USED
     val statusColor = when (ticket.status) {
-        TicketStatus.ISSUED   -> Blue500
-        TicketStatus.USED     -> Slate400
-        TicketStatus.REFUNDED -> Red500
+        TicketStatus.ISSUED -> Blue500
+        TicketStatus.USED -> Slate400
+        else -> Red500 // Incluye REFUNDED o CANCELLED
+    }
+
+    // Generar QR en segundo plano
+    val qrBitmap by produceState<Bitmap?>(initialValue = null, key1 = ticket.code) {
+        value = QRGenerator.generateQRCode(ticket.code, size = 400)
     }
 
     Card(
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column {
@@ -128,7 +137,7 @@ private fun TicketCard(
                         color = statusColor.copy(alpha = 0.12f)
                     ) {
                         Text(
-                            text = ticket.status.name,
+                            text = if (isUsed) "VALIDADO" else "ACTIVO",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = statusColor,
@@ -140,83 +149,91 @@ private fun TicketCard(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    text  = ticket.eventTitle,
+                    text = ticket.eventTitle,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Black,
-                    color = if (isUsed) Slate400 else MaterialTheme.colorScheme.onSurface
+                    color = if (isUsed) Slate400 else Color(0xFF0F172A)
                 )
-                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = ticket.ticketTypeName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Blue500,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Slate400, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.CalendarToday, null, tint = Slate400, modifier = Modifier.size(14.dp))
                     Text(ticket.eventDate, style = MaterialTheme.typography.bodySmall, color = Slate400)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Slate400, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.LocationOn, null, tint = Slate400, modifier = Modifier.size(14.dp))
                     Text(ticket.venueName, style = MaterialTheme.typography.bodySmall, color = Slate400)
                 }
             }
 
-            // ── Línea divisora punteada ───────────────────────────────────
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                thickness = 1.dp,
-                color = Slate100
-            )
+            // ── Divisor ──────────────────────────────────────────────────
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Slate100)
 
             // ── QR Code ───────────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(if (isUsed) Slate100 else MaterialTheme.colorScheme.surface)
-                    .padding(16.dp),
+                    .background(if (isUsed) Slate100.copy(alpha = 0.5f) else Color.White)
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Placeholder del QR (en la app real se usa el campo ticket.code con una librería QR)
                 Surface(
-                    modifier  = Modifier.size(120.dp),
-                    shape     = RoundedCornerShape(12.dp),
-                    color     = if (isUsed) Slate200 else MaterialTheme.colorScheme.surface,
-                    shadowElevation = if (isUsed) 0.dp else 8.dp
+                    modifier = Modifier.size(160.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    shadowElevation = if (isUsed) 0.dp else 4.dp,
+                    border = if (isUsed) null else androidx.compose.foundation.BorderStroke(1.dp, Slate100)
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.QrCode2,
-                            contentDescription = "QR",
-                            modifier = Modifier.size(80.dp),
-                            tint = if (isUsed) Slate400 else Navy900
-                        )
+                        if (qrBitmap != null) {
+                            Image(
+                                bitmap = qrBitmap!!.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.size(140.dp).then(
+                                    if (isUsed) Modifier.background(Color.White.copy(alpha = 0.7f)) else Modifier
+                                )
+                            )
+                        } else {
+                            CircularProgressIndicator(modifier = Modifier.size(30.dp), strokeWidth = 2.dp)
+                        }
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Google Wallet button (solo si el ticket está activo)
                 if (!isUsed) {
                     Button(
                         onClick = onAddToWallet,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape  = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Navy900)
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A))
                     ) {
-                        Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Add to Google Wallet", fontWeight = FontWeight.Bold)
+                        Text("Añadir a Google Wallet", fontWeight = FontWeight.Bold)
                     }
                 } else {
                     Text(
-                        "Validated on ${ticket.usedAt?.toDate()?.toString() ?: ""}",
+                        "Validado el ${ticket.usedAt?.toDate()?.toString()?.take(16) ?: ""}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Slate400
+                        color = Slate400,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    "Ticket ID: #${ticket.id}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Slate400
+                    "ID: ${ticket.id.takeLast(8).uppercase()}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Slate400.copy(alpha = 0.7f)
                 )
             }
         }

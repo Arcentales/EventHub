@@ -50,6 +50,20 @@ class EventsViewModel(
         }
     }
 
+    fun getEventById(eventId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val event = repository.getEventById(eventId)
+            _uiState.value = _uiState.value.copy(
+                selectedEvent = event,
+                isLoading = false
+            )
+            if (event != null) {
+                loadTicketTypes(eventId)
+            }
+        }
+    }
+
     fun selectEvent(event: Event) {
         _uiState.value = _uiState.value.copy(selectedEvent = event)
         loadTicketTypes(event.id)
